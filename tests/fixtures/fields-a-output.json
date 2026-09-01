@@ -1,0 +1,15 @@
+[
+  {"path": "signature", "offset": 0, "len": 4, "kind": "leaf", "type": "magic[4]", "value": "89 50 4E 47", "raw_hex": "89 50 4E 47"},
+  {"path": "line_ending_check", "offset": 4, "len": 4, "kind": "leaf", "type": "magic[4]", "value": "0D 0A 1A 0A", "raw_hex": "0D 0A 1A 0A"},
+  {"path": "ihdr", "offset": 8, "len": 25, "kind": "group", "type": "IHDR", "value": "{ 10 field(s) }", "raw_hex": ""},
+  {"path": "ihdr.length", "offset": 8, "len": 4, "kind": "leaf", "type": "u32", "value": "13", "raw_hex": "00 00 00 0D"},
+  {"path": "ihdr.chunk_type", "offset": 12, "len": 4, "kind": "leaf", "type": "magic[4]", "value": "49 48 44 52", "raw_hex": "49 48 44 52"},
+  {"path": "ihdr.width", "offset": 16, "len": 4, "kind": "leaf", "type": "u32", "value": "2", "raw_hex": "00 00 00 02"},
+  {"path": "ihdr.height", "offset": 20, "len": 4, "kind": "leaf", "type": "u32", "value": "2", "raw_hex": "00 00 00 02"},
+  {"path": "ihdr.bit_depth", "offset": 24, "len": 1, "kind": "leaf", "type": "u8", "value": "8", "raw_hex": "08"},
+  {"path": "ihdr.color_type", "offset": 25, "len": 1, "kind": "leaf", "type": "u8", "value": "2", "raw_hex": "02"},
+  {"path": "ihdr.compression_method", "offset": 26, "len": 1, "kind": "leaf", "type": "u8", "value": "0", "raw_hex": "00"},
+  {"path": "ihdr.filter_method", "offset": 27, "len": 1, "kind": "leaf", "type": "u8", "value": "0", "raw_hex": "00"},
+  {"path": "ihdr.interlace_method", "offset": 28, "len": 1, "kind": "leaf", "type": "u8", "value": "0", "raw_hex": "00"},
+  {"path": "ihdr.crc", "offset": 29, "len": 4, "kind": "leaf", "type": "bytes[4]", "value": "FD D4 9A 73", "raw_hex": "FD D4 9A 73"}
+]

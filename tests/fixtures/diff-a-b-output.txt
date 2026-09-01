@@ -1,0 +1,4 @@
+~ ihdr.width                   u32        2 -> 3
+~ ihdr.crc                     bytes[4]   FD D4 9A 73 -> 12 16 F1 4D
+
+2 changed, 0 added, 0 removed

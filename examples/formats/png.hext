@@ -1,0 +1,35 @@
+# PNG file header template.
+#
+# Every valid PNG starts with an 8-byte signature immediately followed by
+# an IHDR chunk, which the spec (ISO/IEC 15948) guarantees always comes
+# first and is always exactly 13 bytes of payload. That makes the first 33
+# bytes of any PNG file fixed-shape, regardless of what image data or
+# ancillary chunks follow -- a good, small, real-world fit for hexatlas.
+#
+# hexatlas only requires the file to be at least as long as the template
+# consumes, so this template happily applies to full-size PNGs: the rest
+# of the file (IDAT/IEND and friends) shows up in the hex dump as
+# unmapped bytes.
+
+endian be;
+
+struct IHDR {
+    length: u32;
+    chunk_type: magic "IHDR";
+    width: u32;
+    height: u32;
+    bit_depth: u8;
+    color_type: u8;
+    compression_method: u8;
+    filter_method: u8;
+    interlace_method: u8;
+    crc: bytes[4];
+}
+
+struct PngHeader {
+    signature: magic 0x89504E47;
+    line_ending_check: magic 0x0D0A1A0A;
+    ihdr: IHDR;
+}
+
+root PngHeader;

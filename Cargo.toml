@@ -1,0 +1,25 @@
+[package]
+name = "hexatlas"
+version = "0.1.0"
+edition = "2021"
+description = "Inspect and diff binary files against reusable structure templates, with a live hex + field-annotation view."
+license = "MIT"
+authors = ["Prabesh Sharma"]
+repository = "https://github.com/hellpuffyt/hexatlas"
+readme = "README.md"
+keywords = ["binary", "hexdump", "reverse-engineering", "diff", "dsl"]
+categories = ["command-line-utilities", "parser-implementations"]
+
+[[bin]]
+name = "hexatlas"
+path = "src/main.rs"
+
+[lib]
+name = "hexatlas"
+path = "src/lib.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+
+[profile.release]
+opt-level = 3

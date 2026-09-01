@@ -1,0 +1,19 @@
+template OK: examples/formats/png.hext
+default endian: be
+root struct: PngHeader
+structs:
+  IHDR (10 field(s))
+    length: u32
+    chunk_type: magic[4]
+    width: u32
+    height: u32
+    bit_depth: u8
+    color_type: u8
+    compression_method: u8
+    filter_method: u8
+    interlace_method: u8
+    crc: bytes[4]
+  PngHeader (3 field(s))
+    signature: magic[4]
+    line_ending_check: magic[4]
+    ihdr: IHDR
