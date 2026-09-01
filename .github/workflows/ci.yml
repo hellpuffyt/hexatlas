@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo test --all-targets
+        run: cargo test --all-targets
+
+      - name: cargo test --doc
+        run: cargo test --doc
+
+  quality:
+    name: fmt and clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo fmt --all -- --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
+
+  dogfood:
+    name: the bundled PNG example is the README's evidence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: build the release binary
+        run: cargo build --release
+
+      # The README quotes each of these commands' output verbatim as "real,
+      # observed output" against the bundled examples/formats/png.hext
+      # template and the two tiny real PNGs in examples/fixtures/. This job
+      # is what keeps that claim honest: every fixture below is diffed
+      # byte-for-byte against what the release binary actually prints today,
+      # so a change to the DSL, the evaluator, or any renderer that would
+      # silently make the README's quoted output stale fails CI instead of
+      # just "the tool ran and didn't crash."
+      - name: check reports the template structure exactly
+        run: |
+          set -euo pipefail
+          BIN=./target/release/hexatlas
+          "$BIN" check examples/formats/png.hext > actual-check.txt
+          diff -u tests/fixtures/check-output.txt actual-check.txt
+
+      - name: inspect decodes the real PNG header exactly
+        run: |
+          set -euo pipefail
+          BIN=./target/release/hexatlas
+          "$BIN" inspect examples/formats/png.hext examples/fixtures/a.png > actual-inspect.txt
+          diff -u tests/fixtures/inspect-a-output.txt actual-inspect.txt
+
+      - name: diff reports the real width/crc change exactly
+        run: |
+          set -euo pipefail
+          BIN=./target/release/hexatlas
+          "$BIN" diff examples/formats/png.hext examples/fixtures/a.png examples/fixtures/b.png > actual-diff.txt
+          diff -u tests/fixtures/diff-a-b-output.txt actual-diff.txt
+
+      - name: fields --format json is exactly what the README shows
+        run: |
+          set -euo pipefail
+          BIN=./target/release/hexatlas
+          "$BIN" fields examples/formats/png.hext examples/fixtures/a.png --format json > actual-fields.json
+          diff -u tests/fixtures/fields-a-output.json actual-fields.json
+
+      # A template applied to a file it does not describe is a real,
+      # documented failure mode (magic mismatch) -- assert the exact exit
+      # code and message, not just "nonzero".
+      - name: a mismatched file fails with a magic-mismatch error, exit 1
+        run: |
+          set -euo pipefail
+          BIN=./target/release/hexatlas
+          set +e
+          "$BIN" inspect examples/formats/png.hext Cargo.toml > /dev/null 2> actual-error.txt
+          status=$?
+          set -e
+          test "$status" = "1"
+          grep -q "magic mismatch" actual-error.txt
