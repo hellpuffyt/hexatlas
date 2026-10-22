@@ -220,6 +220,15 @@ Exit code 1. Unrecognized-format detection is not an afterthought — every
 precise failure at the first byte that disagrees with the template, not a
 garbage decode of the rest of the file.
 
+## Limits on untrusted templates and files
+
+Templates and files are both treated as untrusted. Struct nesting is limited
+to 256 levels (checked at parse time, in linear time even for heavily shared
+sub-structs), and evaluation stops with an error after
+`64 × file size + 1,000,000` decoded fields, so a template with zero-sized
+array elements or exponential nesting fails fast instead of hanging. See
+[SECURITY.md](SECURITY.md).
+
 ## Installation
 
 ```
@@ -236,7 +245,7 @@ hand-written with no other crates.
 ## Development
 
 ```
-cargo test --all-targets   # 54 unit tests + 8 CLI integration tests
+cargo test --all-targets   # 60 unit + 8 CLI integration + 3 fuzz tests
 cargo test --doc           # the doctest in src/lib.rs
 cargo fmt --all -- --check
 cargo clippy --all-targets -- -D warnings
