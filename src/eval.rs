@@ -45,6 +45,17 @@ pub enum EvalError {
         count_field: String,
         value: i128,
     },
+    /// The template would produce more decoded fields than [`field_limit`]
+    /// allows for this input (e.g. an array of zero-sized structs with a
+    /// count read from the file, or an exponentially nested template).
+    TooManyFields { path: String, limit: usize },
+}
+
+/// Upper bound on decoded fields for an input of `len` bytes. Every leaf
+/// with a non-zero size consumes input, so real templates stay far below
+/// this; only zero-sized elements or exponential nesting can reach it.
+pub fn field_limit(len: usize) -> usize {
+    len.saturating_mul(64).saturating_add(1_000_000)
 }
 
 impl fmt::Display for EvalError {
@@ -77,6 +88,11 @@ impl fmt::Display for EvalError {
             } => write!(
                 f,
                 "array `{path}` count field `{count_field}` decoded to a negative value ({value})"
+            ),
+            EvalError::TooManyFields { path, limit } => write!(
+                f,
+                "template produces more than {limit} fields for this file (at `{path}`); \
+                 zero-sized array elements or exponential nesting?"
             ),
         }
     }
@@ -138,6 +154,15 @@ fn eval_field(
     ints: &HashMap<String, i128>,
     default_endian: Endianness,
 ) -> Result<Option<i128>, EvalError> {
+    // Every branch below pushes at least one field, so this bounds the work
+    // and memory of any template, including loops over zero-sized elements.
+    let limit = field_limit(bytes.len());
+    if out.len() >= limit {
+        return Err(EvalError::TooManyFields {
+            path: path.to_string(),
+            limit,
+        });
+    }
     match ty {
         FieldType::Int {
             bits,
@@ -206,7 +231,7 @@ fn eval_field(
             while end > 0 && raw[end - 1] == 0 {
                 end -= 1;
             }
-            let rendered = String::from_utf8_lossy(&raw[..end]).to_string();
+            let rendered = printable(&String::from_utf8_lossy(&raw[..end]));
             out.push(FieldValue {
                 path: path.to_string(),
                 offset: *cursor,
@@ -222,7 +247,7 @@ fn eval_field(
         FieldType::CStr(n) => {
             let raw = take_bytes(bytes, *cursor, *n, path)?;
             let end = raw.iter().position(|&b| b == 0).unwrap_or(raw.len());
-            let rendered = String::from_utf8_lossy(&raw[..end]).to_string();
+            let rendered = printable(&String::from_utf8_lossy(&raw[..end]));
             out.push(FieldValue {
                 path: path.to_string(),
                 offset: *cursor,
@@ -314,6 +339,21 @@ fn eval_field(
     }
 }
 
+/// Text decoded from a file is untrusted: control characters (terminal
+/// escape sequences, newlines that would break the field table) are shown
+/// as `\u{..}` escapes instead of being written to the terminal raw.
+fn printable(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if c.is_control() {
+            out.extend(c.escape_unicode());
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
 fn take_bytes<'a>(
     bytes: &'a [u8],
     offset: usize,
@@ -388,6 +428,62 @@ pub fn hex_string(bytes: &[u8]) -> String {
 mod tests {
     use super::*;
     use crate::parser::parse_template;
+
+    /// Regression: `ascii`/`cstr` text from the file was rendered verbatim,
+    /// so a crafted file could inject terminal escape sequences into
+    /// `inspect`/`fields` output.
+    #[test]
+    fn decoded_text_cannot_carry_control_characters() {
+        let t = parse_template("struct A { a: ascii[6]; c: cstr[4]; } root A;").unwrap();
+        let fields = apply(&t, b"\x1b[2Jhi\nx\x07\0").unwrap();
+        assert_eq!(fields[0].rendered, "\\u{1b}[2Jhi");
+        assert_eq!(fields[1].rendered, "\\u{a}x\\u{7}");
+        let plain = apply(&t, b"hello\0abc\0").unwrap();
+        assert_eq!(plain[0].rendered, "hello");
+        assert_eq!(plain[1].rendered, "abc");
+    }
+
+    /// Regression: an array of zero-sized structs with a count read from
+    /// the file looped (and allocated) once per count — a 4-byte file and a
+    /// one-line template hung the tool. Evaluation is now bounded.
+    #[test]
+    fn zero_sized_array_elements_cannot_run_away() {
+        let t = parse_template("struct E { } struct A { n: u32le; z: E[n]; } root A;").unwrap();
+        match apply(&t, &[0xFF, 0xFF, 0xFF, 0x7F]) {
+            Err(EvalError::TooManyFields { limit, .. }) => assert_eq!(limit, field_limit(4)),
+            other => panic!("expected TooManyFields, got {other:?}"),
+        }
+    }
+
+    /// Regression: zero-sized fields shared through a binary "diamond" of
+    /// structs produced 2^n fields from a 1-byte file.
+    #[test]
+    fn exponential_zero_sized_nesting_is_bounded() {
+        let mut src = String::from("struct S0 { x: u8[0]; }\n");
+        for i in 1..30 {
+            src += &format!("struct S{i} {{ a: S{p}; b: S{p}; }}\n", p = i - 1);
+        }
+        src += "root S29;";
+        let t = parse_template(&src).unwrap();
+        assert!(matches!(
+            apply(&t, &[1]),
+            Err(EvalError::TooManyFields { .. })
+        ));
+    }
+
+    #[test]
+    fn nesting_at_the_depth_limit_still_evaluates() {
+        let depth = crate::parser::MAX_STRUCT_DEPTH;
+        let mut src = String::from("struct T1 { x: u8; }\n");
+        for i in 2..=depth {
+            src += &format!("struct T{i} {{ a: T{p}; }}\n", p = i - 1);
+        }
+        src += &format!("root T{depth};");
+        let t = parse_template(&src).unwrap();
+        let fields = apply(&t, &[7]).unwrap();
+        assert_eq!(fields.len(), depth);
+        assert_eq!(fields.last().unwrap().rendered, "7");
+    }
 
     #[test]
     fn decodes_scalar_fields_little_endian() {
