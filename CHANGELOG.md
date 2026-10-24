@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- A one-line template with an array of zero-sized structs whose count is
+  read from the file (e.g. `struct E { } struct A { n: u32le; z: E[n]; }`)
+  made `hexatlas` loop and allocate once per count, hanging on a 4-byte
+  file; evaluation is now bounded (`EvalError::TooManyFields`).
+- Template validation re-walked shared sub-structs without memoisation, so
+  a 40-struct "diamond" template never finished `check`; it is now linear.
+- Arbitrarily deep struct chains were accepted and then overflowed the
+  stack during evaluation; nesting is limited to 256 levels.
+
+- `ascii`/`cstr` text decoded from a file was printed verbatim, so a crafted
+  file could inject terminal escape sequences; control characters are now
+  rendered as `\u{..}` escapes.
+
+### Added
+
+- Deterministic fuzz tests (`tests/fuzz.rs`), `SECURITY.md`, `.editorconfig`.
+
 ## [0.1.0] - 2026-09-01
 
 ### Added

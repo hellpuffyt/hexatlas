@@ -361,38 +361,69 @@ fn validate_type(
     }
 }
 
+/// Deepest allowed chain of nested struct references. Evaluation recurses
+/// once per level, so this also bounds the evaluator's stack use.
+pub const MAX_STRUCT_DEPTH: usize = 256;
+
+/// Rejects cyclic struct references and nesting deeper than
+/// [`MAX_STRUCT_DEPTH`]. Each struct's nesting height is computed once
+/// (memoised), so a template whose structs share sub-structs many times over
+/// ("diamonds") is checked in linear time instead of exponential time, and
+/// the recursion here is itself bounded by `MAX_STRUCT_DEPTH`.
 fn check_no_cycles(template: &TemplateFile) -> Result<(), ParseError> {
-    fn visit(
-        template: &TemplateFile,
-        name: &str,
-        stack: &mut Vec<String>,
-    ) -> Result<(), ParseError> {
-        if stack.iter().any(|s| s == name) {
-            stack.push(name.to_string());
+    fn too_deep(name: &str) -> ParseError {
+        ParseError {
+            message: format!("struct nesting deeper than {MAX_STRUCT_DEPTH} levels (at `{name}`)"),
+            line: 0,
+            col: 0,
+        }
+    }
+    /// Returns the nesting height of `name` (a struct without struct
+    /// fields has height 1).
+    fn visit<'t>(
+        template: &'t TemplateFile,
+        name: &'t str,
+        stack: &mut Vec<&'t str>,
+        heights: &mut HashMap<&'t str, usize>,
+    ) -> Result<usize, ParseError> {
+        if let Some(&h) = heights.get(name) {
+            return Ok(h);
+        }
+        if stack.contains(&name) {
+            stack.push(name);
             return Err(ParseError {
                 message: format!("cyclic struct reference: {}", stack.join(" -> ")),
                 line: 0,
                 col: 0,
             });
         }
-        stack.push(name.to_string());
+        if stack.len() >= MAX_STRUCT_DEPTH {
+            return Err(too_deep(name));
+        }
+        stack.push(name);
         let def = &template.structs[name];
+        let mut height = 1;
         for field in &def.fields {
             let mut t = &field.ty;
             while let FieldType::Array { elem, .. } = t {
                 t = elem;
             }
             if let FieldType::StructRef(inner) = t {
-                visit(template, inner, stack)?;
+                height = height.max(1 + visit(template, inner, stack, heights)?);
             }
         }
         stack.pop();
-        Ok(())
+        if height > MAX_STRUCT_DEPTH {
+            return Err(too_deep(name));
+        }
+        heights.insert(name, height);
+        Ok(height)
     }
 
+    let mut heights = HashMap::new();
     for name in &template.struct_order {
         let mut stack = Vec::new();
-        visit(template, name, &mut stack)?;
+        visit(template, name, &mut stack, &mut heights)?;
     }
     Ok(())
 }
@@ -557,6 +588,39 @@ mod tests {
         let src = "struct A { next: A; } root A;";
         let err = parse_template(src).unwrap_err();
         assert!(err.message.contains("cyclic struct reference"));
+    }
+
+    /// Regression: the cycle check re-walked shared sub-structs without
+    /// memoisation, so a 40-struct "diamond" template took exponential time
+    /// (`hexatlas check` never finished).
+    #[test]
+    fn diamond_templates_validate_in_linear_time() {
+        let mut src = String::from("struct S0 { x: u8; }\n");
+        for i in 1..60 {
+            src += &format!("struct S{i} {{ a: S{p}; b: S{p}; }}\n", p = i - 1);
+        }
+        src += "root S59;";
+        let started = std::time::Instant::now();
+        parse_template(&src).unwrap();
+        assert!(started.elapsed() < std::time::Duration::from_secs(5));
+    }
+
+    /// Regression: a long chain of nested structs was accepted and then
+    /// overflowed the stack during evaluation; nesting is now bounded.
+    #[test]
+    fn struct_nesting_deeper_than_the_limit_is_rejected() {
+        for reverse in [false, true] {
+            let mut defs: Vec<String> = vec!["struct T0 { x: u8; }".into()];
+            for i in 1..=MAX_STRUCT_DEPTH {
+                defs.push(format!("struct T{i} {{ a: T{p}; }}", p = i - 1));
+            }
+            if reverse {
+                defs.reverse();
+            }
+            let src = format!("{}\nroot T{MAX_STRUCT_DEPTH};", defs.join("\n"));
+            let err = parse_template(&src).unwrap_err();
+            assert!(err.message.contains("deeper than"), "{}", err.message);
+        }
     }
 
     #[test]
