@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="t d">
+<title id="t">hexatlas pipeline</title>
+<desc id="d">A .hext template is lexed and parsed into a TemplateFile, applied to file bytes by eval::apply to produce FieldValues, which feed the hex view, the JSON encoder and the field-path diff. Bottom: the 33 header bytes of examples/fixtures/a.png and the fields png.hext maps them to.</desc>
+<defs><marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#A3AAA6"/></marker><marker id="ha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#3FBF8A"/></marker></defs>
+<rect width="1200" height="480" fill="#0C0D0D"/>
+<rect x="850" y="14" width="320" height="30" rx="15" fill="#0C0D0D" stroke="#2A2E2D"/>
+<text x="1010" y="34" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" fill="#EEEAE2" text-anchor="middle" font-weight="400">file bytes: a.png / b.png</text>
+<path d="M1010 44 L1010 62" fill="none" stroke="#A3AAA6" stroke-width="1.4" marker-end="url(#h)"/>
+<rect x="30" y="64" width="200" height="110" rx="8" fill="#17191A" stroke="#2A2E2D" stroke-width="1"/>
+<text x="44" y="88" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" fill="#EEEAE2" text-anchor="start" font-weight="600">png.hext</text>
+<text x="44" y="110" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">template DSL source</text>
+<text x="44" y="127" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">struct / root / endian</text>
+<text x="44" y="144" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">magic, arrays, nesting</text>
+<rect x="270" y="64" width="200" height="110" rx="8" fill="#17191A" stroke="#2A2E2D" stroke-width="1"/>
+<text x="284" y="88" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" fill="#EEEAE2" text-anchor="start" font-weight="600">lexer.rs</text>
+<text x="284" y="110" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">lex(source)</text>
+<text x="284" y="127" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">-&gt; Vec&lt;SpannedToken&gt;</text>
+<text x="284" y="144" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">errors carry line:col</text>
+<rect x="510" y="64" width="300" height="110" rx="8" fill="#17191A" stroke="#2A2E2D" stroke-width="1"/>
+<text x="524" y="88" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" fill="#EEEAE2" text-anchor="start" font-weight="600">parser.rs</text>
+<text x="524" y="110" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">parse_template() -&gt; TemplateFile</text>
+<text x="524" y="127" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">count fields must exist earlier</text>
+<text x="524" y="144" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">nesting depth &lt;= 256, no self-reference</text>
+<rect x="850" y="64" width="320" height="110" rx="8" fill="#17191A" stroke="#3FBF8A" stroke-width="1.5"/>
+<text x="864" y="88" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" fill="#3FBF8A" text-anchor="start" font-weight="600">eval.rs</text>
+<text x="864" y="110" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">apply(&amp;template, bytes) -&gt; Vec&lt;FieldValue&gt;</text>
+<text x="864" y="127" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">magic checked before later fields</text>
+<text x="864" y="144" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">stops after 64 x len + 1,000,000 fields</text>
+<path d="M230 119 L268 119" fill="none" stroke="#A3AAA6" stroke-width="1.4" marker-end="url(#h)"/>
+<path d="M470 119 L508 119" fill="none" stroke="#A3AAA6" stroke-width="1.4" marker-end="url(#h)"/>
+<path d="M810 119 L848 119" fill="none" stroke="#A3AAA6" stroke-width="1.4" marker-end="url(#h)"/>
+<path d="M1010 174 L1010 198 L210 198" fill="none" stroke="#A3AAA6" stroke-width="1.4"/>
+<path d="M210 198 L210 220" fill="none" stroke="#A3AAA6" stroke-width="1.4" marker-end="url(#h)"/>
+<path d="M600 198 L600 220" fill="none" stroke="#A3AAA6" stroke-width="1.4" marker-end="url(#h)"/>
+<path d="M990 198 L990 220" fill="none" stroke="#A3AAA6" stroke-width="1.4" marker-end="url(#h)"/>
+<rect x="30" y="222" width="360" height="92" rx="8" fill="#17191A" stroke="#2A2E2D" stroke-width="1"/>
+<text x="44" y="246" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" fill="#EEEAE2" text-anchor="start" font-weight="600">hexview.rs</text>
+<text x="44" y="268" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">render_hex_dump, render_field_table</text>
+<text x="44" y="285" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">commands: inspect, fields --format text</text>
+<rect x="420" y="222" width="360" height="92" rx="8" fill="#17191A" stroke="#2A2E2D" stroke-width="1"/>
+<text x="434" y="246" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" fill="#EEEAE2" text-anchor="start" font-weight="600">json.rs</text>
+<text x="434" y="268" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">fields_to_json (hand-written encoder)</text>
+<text x="434" y="285" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">command: fields --format json</text>
+<rect x="810" y="222" width="360" height="92" rx="8" fill="#17191A" stroke="#2A2E2D" stroke-width="1"/>
+<text x="824" y="246" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" fill="#EEEAE2" text-anchor="start" font-weight="600">diff.rs</text>
+<text x="824" y="268" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">diff_fields(a, b) keyed by field path</text>
+<text x="824" y="285" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11.5" fill="#A3AAA6" text-anchor="start" font-weight="400">command: diff  -&gt;  ~ ihdr.width 2 -&gt; 3</text>
+<text x="30" y="350" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" fill="#EEEAE2" text-anchor="start" font-weight="400">examples/fixtures/a.png, offsets 0x00-0x20, as decoded by png.hext</text>
+<rect x="30" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="42.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">89</text>
+<rect x="56" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="68.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">50</text>
+<rect x="82" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="94.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">4E</text>
+<rect x="108" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="120.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">47</text>
+<path d="M30 396 L30 392 L132 392 L132 396" fill="none" stroke="#2A2E2D"/>
+<text x="30" y="410" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#A3AAA6" text-anchor="start" font-weight="400">signature</text>
+<rect x="134" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="146.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">0D</text>
+<rect x="160" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="172.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">0A</text>
+<rect x="186" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="198.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">1A</text>
+<rect x="212" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="224.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">0A</text>
+<path d="M134 396 L134 392 L236 392 L236 396" fill="none" stroke="#2A2E2D"/>
+<text x="134" y="440" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#A3AAA6" text-anchor="start" font-weight="400">line_ending_check</text>
+<rect x="238" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="250.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">00</text>
+<rect x="264" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="276.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">00</text>
+<rect x="290" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="302.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">00</text>
+<rect x="316" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="328.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">0D</text>
+<path d="M238 396 L238 392 L340 392 L340 396" fill="none" stroke="#2A2E2D"/>
+<text x="238" y="410" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#A3AAA6" text-anchor="start" font-weight="400">ihdr.length</text>
+<rect x="342" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="354.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">49</text>
+<rect x="368" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="380.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">48</text>
+<rect x="394" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="406.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">44</text>
+<rect x="420" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="432.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">52</text>
+<path d="M342 396 L342 392 L444 392 L444 396" fill="none" stroke="#2A2E2D"/>
+<text x="342" y="440" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#A3AAA6" text-anchor="start" font-weight="400">ihdr.chunk_type</text>
+<rect x="446" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#3FBF8A"/>
+<text x="458.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">00</text>
+<rect x="472" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#3FBF8A"/>
+<text x="484.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">00</text>
+<rect x="498" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#3FBF8A"/>
+<text x="510.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">00</text>
+<rect x="524" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#3FBF8A"/>
+<text x="536.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">02</text>
+<path d="M446 396 L446 392 L548 392 L548 396" fill="none" stroke="#3FBF8A"/>
+<text x="446" y="410" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#3FBF8A" text-anchor="start" font-weight="400">ihdr.width</text>
+<rect x="550" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="562.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">00</text>
+<rect x="576" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="588.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">00</text>
+<rect x="602" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="614.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">00</text>
+<rect x="628" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="640.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">02</text>
+<path d="M550 396 L550 392 L652 392 L652 396" fill="none" stroke="#2A2E2D"/>
+<text x="550" y="440" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#A3AAA6" text-anchor="start" font-weight="400">ihdr.height</text>
+<rect x="654" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="666.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">08</text>
+<rect x="680" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="692.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">02</text>
+<rect x="706" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="718.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">00</text>
+<rect x="732" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="744.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">00</text>
+<rect x="758" y="364" width="24" height="28" rx="3" fill="#17191A" stroke="#2A2E2D"/>
+<text x="770.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">00</text>
+<path d="M654 396 L654 392 L782 392 L782 396" fill="none" stroke="#2A2E2D"/>
+<text x="654" y="410" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#A3AAA6" text-anchor="start" font-weight="400">bit_depth .. interlace (5 x u8)</text>
+<rect x="784" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="796.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">FD</text>
+<rect x="810" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="822.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">D4</text>
+<rect x="836" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="848.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">9A</text>
+<rect x="862" y="364" width="24" height="28" rx="3" fill="#202423" stroke="#2A2E2D"/>
+<text x="874.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#EEEAE2" text-anchor="middle" font-weight="400">73</text>
+<path d="M784 396 L784 392 L886 392 L886 396" fill="none" stroke="#2A2E2D"/>
+<text x="784" y="440" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#A3AAA6" text-anchor="start" font-weight="400">ihdr.crc</text>
+<rect x="898" y="364" width="272" height="28" rx="3" fill="none" stroke="#2A2E2D" stroke-dasharray="4 3"/>
+<text x="1034.0" y="383" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#A3AAA6" text-anchor="middle" font-weight="400">40 more bytes: IDAT, IEND</text>
+<text x="898" y="410" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10.5" fill="#A3AAA6" text-anchor="start" font-weight="400">not in the template, shown as plain hex</text>
+</svg>
