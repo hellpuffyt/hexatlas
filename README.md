@@ -1,65 +1,57 @@
 # hexatlas
 
-Inspect and diff binary files against reusable structure templates — describe
-a binary format once, in a small DSL, and reuse it across every file that
-claims to be that format, with a live hex + field-annotation view.
+Describe a binary format once in a small template language, then use that
+template to annotate a hex dump, list decoded fields, or diff two files field by
+field.
+
+<img src="docs/screenshots/inspect-png-header-color.png" width="100%" alt="Terminal capture of hexatlas inspect --color on a 73-byte PNG: the first 33 bytes are coloured by the top-level field that owns them, followed by a table of offsets, lengths, paths, types and decoded values such as ihdr.width = 2.">
+
+*Terminal capture: `inspect --color` on the bundled 2x2 PNG. The 33 header bytes are coloured by the template field that owns them; the IDAT and IEND bytes after them are not in the template and stay grey.*
+
+<img src="docs/screenshots/diff-png-width-change.png" width="100%" alt="Terminal capture of hexatlas diff between the 2x2 and 3x2 PNG fixtures, reporting ihdr.width changed from 2 to 3 and ihdr.crc changed, with a summary of 2 changed, 0 added, 0 removed.">
+
+*Terminal capture: `diff` between the 2x2 and 3x2 fixtures reports the change by field path.*
+
+**Status:** version 0.1.0, a working command-line tool and library. Not published
+on crates.io. CI runs the tests on Linux, macOS and Windows and diffs the README's
+example output against the release binary.
 
 ```
-hexatlas check   <template>                    # parse & validate a template
-hexatlas inspect <template> <file>              # annotated hex dump + field table
-hexatlas fields  <template> <file> [--format]   # decoded fields, text or JSON
-hexatlas diff    <template> <file-a> <file-b>   # field-level structural diff
+hexatlas check   <template>                                # parse and validate a template
+hexatlas inspect <template> <file> [--color] [--no-hex]    # annotated hex dump + field table
+hexatlas fields  <template> <file> [--format text|json]    # decoded fields
+hexatlas diff    <template> <file-a> <file-b>              # field-level structural diff
 ```
 
-## Why this and not the 1,000 clones
+## How it differs from a hex editor
 
-Hex viewers are everywhere, and "binary diff" tools are everywhere too. What
-almost none of them do is let you **describe a format once and reuse that
-description** — most hex editors annotate a file interactively, by hand,
-every single time you open a new file of the same format, and most binary
-diff tools (`cmp`, `vbindiff`, `radiff2`) compare two files as undifferentiated
-byte streams with no notion of "this range is a `u32` called `width`."
+Hex editors usually make you annotate each file by hand, and byte-level diff
+tools (`cmp`, `vbindiff`, `radiff2`) compare two files as plain byte streams.
+hexatlas keeps the format description separate from the file:
 
-hexatlas separates the two concerns that everyone else bundles together:
-
-- **A structure template is a first-class, reusable artifact.** Write
-  `png.hext` once — describing the PNG signature and IHDR chunk as named,
-  typed fields — and every command (`inspect`, `fields`, `diff`) applies it
-  to as many files as you want. Nobody has to re-annotate the same 33 bytes
-  by hand for the tenth PNG they open this week.
-- **Diffing is field-aware, not byte-aware.** `hexatlas diff` doesn't tell
-  you "byte 16 changed from `0x02` to `0x03`" — it tells you
-  `ihdr.width  2 -> 3`, because it decoded both files through the same
-  template first. A `cmp -l` or `vbindiff` session on a format with any
-  variable-length or reordered fields turns into noise the moment one field
-  shifts everything after it; hexatlas compares by *field path*, so an
-  inserted array element shows up as one `+` line, not a wall of "everything
-  after byte N differs."
-- **The template DSL has real semantics, not just byte offsets.** Magic-byte
-  validation (`magic "PNG"`), endianness (per-field or template-wide,
-  `le`/`be`), nested structs, and arrays sized by an earlier field
-  (`items: u16[count]`) are first-class grammar, checked at parse time — a
-  count field that doesn't exist, or a struct that references itself, is
-  rejected before you ever point it at a file. That is a small, real type
-  system for binary layouts, not a list of `(offset, length, label)` tuples.
-- **A template only needs to describe as much of the file as you care
-  about.** The bundled example decodes exactly the fixed 33-byte PNG header
-  and leaves the rest of the file — compressed image data, `IEND` — as
-  plain, unmapped bytes in the hex dump. You are not forced to model an
-  entire format before you can use any of it.
-
-None of these pieces is exotic on its own. The combination — a small,
-validated DSL for binary layout, applied identically by three different
-consumers (hex view, field table, diff) — is not what you get from a hex
-editor, a `struct`-annotation macro for one language's own types, or a
-generic byte-level diff tool.
+- **The template is a reusable file.** `png.hext` names and types the PNG
+  signature and IHDR chunk once. `inspect`, `fields` and `diff` all apply it, to
+  as many files as you like.
+- **Diffs are by field path, not by byte offset.** `diff` decodes both files
+  through the same template and reports `ihdr.width  2 -> 3`. When an array has
+  a different length in each file, the extra element shows up as one `+` line
+  (for example `items[2]`) instead of every later byte appearing to change.
+- **Templates are checked before they touch a file.** Magic bytes, template-wide
+  or per-field endianness, nested structs and arrays sized by an earlier field
+  (`items: u16[count]`) are part of the grammar. An array count that names a
+  missing or later field, an undefined struct, or a struct that contains itself
+  is rejected at parse time.
+- **A template can describe part of a file.** The bundled example decodes only
+  the fixed 33-byte PNG header. The rest of the file (compressed image data,
+  `IEND`) is still shown in the hex dump, just without annotations.
 
 ## The template DSL
 
 A `.hext` template is a sequence of `struct` definitions plus one `root`
 declaration naming the struct applied at offset 0. See
 [`examples/formats/png.hext`](examples/formats/png.hext) for a complete,
-real example (PNG's fixed-shape signature + IHDR chunk):
+real example (PNG's fixed-shape signature + IHDR chunk). Lines starting with `#`
+are comments.
 
 ```hext
 endian be;
@@ -99,13 +91,19 @@ Field types:
 | `cstr[N]`                      | fixed-size buffer holding a NUL-terminated string                     |
 | `bytes[N]`                     | an opaque N-byte blob, rendered as hex                                |
 | `SomeStruct`                   | a nested struct, by name                                              |
-| `Type[N]`                      | a fixed-length array                                                  |
+| `Type[N]`                      | a fixed-length array of a numeric type or a struct                    |
 | `Type[some_earlier_field]`     | an array whose length is read from an earlier sibling integer field   |
 
 `endian le;` / `endian be;` at the top of the file sets the template-wide
 default (little-endian if omitted); any scalar field can override it.
 
-## Usage — real, observed output
+Two details of literals: string literals accept the escapes `\0`, `\n`, `\t`,
+`\\` and `\"`, and a hex magic such as `magic 0x00CAFE` is stored as the shortest
+big-endian byte sequence for that number, so leading zero bytes are dropped
+(that example matches the two bytes `CA FE`). To require a leading zero, put
+`magic "\0"` in its own field before the rest.
+
+## Usage, with real output
 
 The commands below were run against
 [`examples/formats/png.hext`](examples/formats/png.hext) and two tiny, real
@@ -113,7 +111,7 @@ PNGs generated for this repo
 ([`examples/fixtures/a.png`](examples/fixtures/a.png) is 2x2,
 [`b.png`](examples/fixtures/b.png) is 3x2). Every command's output shown
 here is checked byte-for-byte in CI against
-[`tests/fixtures/`](tests/fixtures) — see the `dogfood` job in
+[`tests/fixtures/`](tests/fixtures) by the `dogfood` job in
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ### `hexatlas check`
@@ -168,10 +166,10 @@ OFFSET    LEN  PATH                           TYPE                 VALUE
 ```
 
 Notice the header (offsets `0x00`-`0x20`) is fully annotated, while the
-`IDAT`/`IEND` chunks past it are just plain hex — the template only claims to
-describe what it describes. Pass `--color` in a real terminal to see each
-top-level field highlighted in its own ANSI color across the hex and ASCII
-columns; `--no-hex` skips the dump and prints only the field table.
+`IDAT`/`IEND` chunks past it are plain hex, because the template does not
+describe them. `--color` gives each top-level field its own ANSI colour in the
+hex and ASCII columns (see the capture at the top). `--no-hex` skips the dump
+and prints only the field table.
 
 ### `hexatlas diff` (field-aware, not byte-aware)
 
@@ -184,11 +182,10 @@ $ hexatlas diff examples/formats/png.hext examples/fixtures/a.png examples/fixtu
 ```
 
 Only `width` and `crc` (which covers `width` in its checksum) changed
-between the 2x2 and 3x2 fixtures — everything else in the header, including
-every other IHDR byte, is identical, and the diff says so directly instead of
-making you eyeball two hex dumps for a one-byte change. Diffing files whose
-templates produce differently-sized arrays reports `+`/`-` per array element
-by path (e.g. `items[2]`), not a single "sizes differ" bail-out.
+between the 2x2 and 3x2 fixtures. Every other header field is identical, so
+the diff lists nothing else. When an array has a different length in the two
+files, the array itself is reported as changed and each extra element is
+listed as `+` or `-` by path (for example `items[2]`).
 
 ### `hexatlas fields --format json`
 
@@ -215,10 +212,16 @@ $ hexatlas inspect examples/formats/png.hext Cargo.toml
 error: Cargo.toml (examples/formats/png.hext): magic mismatch at field `signature` (offset 0): expected [89 50 4E 47], found [5B 70 61 63]
 ```
 
-Exit code 1. Unrecognized-format detection is not an afterthought — every
-`magic` field is checked before any later field is even read, so you get a
-precise failure at the first byte that disagrees with the template, not a
-garbage decode of the rest of the file.
+Exit code 1. Fields are decoded in order, so a `magic` field fails at the
+first mismatch and nothing after it is decoded. A file that ends early fails
+the same way, naming the field and how many bytes it needed.
+
+Exit codes: `0` success, `1` an unreadable file, a template error or a decode
+error, `2` invalid command-line arguments.
+
+Template errors from the parser carry a line and column. Semantic errors found
+after parsing (an unknown struct, a bad array count, a cycle) currently print
+`line 0, col 0`, so search the message for the struct and field names instead.
 
 ## Limits on untrusted templates and files
 
@@ -226,8 +229,18 @@ Templates and files are both treated as untrusted. Struct nesting is limited
 to 256 levels (checked at parse time, in linear time even for heavily shared
 sub-structs), and evaluation stops with an error after
 `64 × file size + 1,000,000` decoded fields, so a template with zero-sized
-array elements or exponential nesting fails fast instead of hanging. See
-[SECURITY.md](SECURITY.md).
+array elements or exponential nesting fails fast instead of hanging. Report
+vulnerabilities as described in [SECURITY.md](SECURITY.md).
+
+## Architecture
+
+<img src="docs/assets/overview.svg" width="100%" alt="Diagram: a .hext template goes through lexer.rs and parser.rs into a TemplateFile; eval.rs applies it to file bytes to produce FieldValues, which feed hexview.rs, json.rs and diff.rs. Below, the 33 header bytes of a.png are labelled with the png.hext fields they decode to.">
+
+*Diagram of the modules (not a screenshot), with the bytes of `a.png` mapped to template fields.*
+
+The library crate exposes the same pipeline: `parser::parse_template`,
+`eval::apply`, then `hexview`, `json` or `diff` on the resulting fields. The
+doctest in [`src/lib.rs`](src/lib.rs) is a minimal example.
 
 ## Installation
 
@@ -237,16 +250,17 @@ cd hexatlas
 cargo install --path .
 ```
 
-Requires only Rust's standard toolchain — the sole runtime dependency is
-[`clap`](https://crates.io/crates/clap) for argument parsing; the DSL lexer,
-parser, evaluator, hex renderer, diff engine, and JSON encoder are all
-hand-written with no other crates.
+Needs a stable Rust toolchain (CI uses the current stable; no minimum version
+is declared). The only dependency is [`clap`](https://crates.io/crates/clap) for
+argument parsing. The lexer, parser, evaluator, hex renderer, diff engine and
+JSON encoder are written by hand.
 
 ## Development
 
 ```
 cargo test --all-targets   # 60 unit + 8 CLI integration + 3 fuzz tests
 cargo test --doc           # the doctest in src/lib.rs
+cargo build --release      # then the dogfood checks in ci.yml
 cargo fmt --all -- --check
 cargo clippy --all-targets -- -D warnings
 ```
@@ -255,4 +269,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for more.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
